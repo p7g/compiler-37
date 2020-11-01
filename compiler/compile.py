@@ -60,10 +60,16 @@ class Compile:
         if decl.export:
             self.exports.append(decl.name)
 
+        stack_usage = 0
+        for stmt in decl.body:
+            if isinstance(stmt, VarDecl):
+                stack_usage += align(self.get_type(stmt.type).size(), 8)
+
         # Prologue
         instructions = [
             s.Push(s.Register.rbp),
             s.Mov(s.Register.rsp, s.Register.rbp),
+            s.Sub(s.Immediate(stack_usage), s.Register.rsp),
         ]
 
         stack_offset = 0
@@ -184,7 +190,7 @@ class Compile:
             instructions.append(s.Label(end_label()))
         instructions.extend(
             [
-                s.Pop(s.Register.rbp),
+                s.Leave(),
                 s.Ret(),
             ]
         )

@@ -252,32 +252,32 @@ class Instruction:
     pass
 
 
-class Mov(Instruction):
+class SizedBinaryInstruction(Instruction):
     def __init__(self, src, dest, size=None):
         self.src = src
         self.dest = dest
         self.size = size or Operand.unify_size(src, dest)
 
+
+class SizedUnaryInstruction(Instruction):
+    def __init__(self, operand, size=None):
+        self.operand = operand
+        self.size = size or Operand.unify_size(operand)
+
+
+class Mov(SizedBinaryInstruction):
     def __str__(self):
         return f"mov{self.size} {self.src}, {self.dest}"
 
 
-class Push(Instruction):
-    def __init__(self, src, size=None):
-        self.src = src
-        self.size = size or Operand.unify_size(src)
-
+class Push(SizedUnaryInstruction):
     def __str__(self):
-        return f"push{self.size} {self.src}"
+        return f"push{self.size} {self.operand}"
 
 
-class Pop(Instruction):
-    def __init__(self, dest, size=None):
-        self.dest = dest
-        self.size = size or Operand.unify_size(dest)
-
+class Pop(SizedUnaryInstruction):
     def __str__(self):
-        return f"pop{self.size} {self.dest}"
+        return f"pop{self.size} {self.operand}"
 
 
 class Ret(Instruction):
@@ -299,6 +299,16 @@ class Jmp(Instruction):
 
     def __str__(self):
         return f"jmp {self.to}"
+
+
+class Sub(SizedBinaryInstruction):
+    def __str__(self):
+        return f"sub{self.size} {self.src}, {self.dest}"
+
+
+class Leave(Instruction):
+    def __str__(self):
+        return "leave"
 
 
 class Block:

@@ -38,8 +38,8 @@ program = ast.File(
             export=True,
             name="test",
             arguments=[],
-            # return_type=ast.NamedTypeExpr("BigStruct"),
-            return_type=ast.NamedTypeExpr("int32"),
+            return_type=ast.NamedTypeExpr("BigStruct"),
+            # return_type=ast.NamedTypeExpr("int32"),
             body=[
                 ast.VarDecl("a", ast.NamedTypeExpr("BigStruct")),
                 ast.AssignStmt(
@@ -59,8 +59,8 @@ program = ast.File(
                     ast.FieldAccessExpr(ast.IdentExpr("a"), "eight_two"),
                     ast.IntExpr(82),
                 ),
-                ast.ReturnStmt(ast.IdentExpr("b")),
-                ast.ReturnStmt(ast.FieldAccessExpr(ast.IdentExpr("a"), "thirty_two")),
+                ast.ReturnStmt(ast.IdentExpr("a")),
+                # ast.ReturnStmt(ast.FieldAccessExpr(ast.IdentExpr("a"), "thirty_two")),
             ],
         ),
     ],
