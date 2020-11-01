@@ -100,36 +100,152 @@ class RegisterMeta(EnumMeta, ABCMeta):
     pass
 
 
+class RegisterFamily:
+    def __init__(self, byte, word, double_word, quad_word, *, extra=None):
+        self.sizes = {
+            Size.byte: byte,
+            Size.word: word,
+            Size.double_word: double_word,
+            Size.quad_word: quad_word,
+        }
+        self.extra = extra
+
+    def __contains__(self, reg):
+        return reg in set(self.sizes.values()) or (
+            self.extra is not None and reg in self.extra
+        )
+
+    def size_of(self, reg):
+        for size, reg2 in self.sizes.items():
+            if reg is reg2:
+                return size
+
+    def with_size(self, size):
+        return self.sizes[size]
+
+    @classmethod
+    def for_register(cls, reg):
+        for fam in register_families:
+            if reg in fam:
+                return fam
+
+
 class Register(Operand, Enum, metaclass=RegisterMeta):
+    # 8 byte
     rax = "%rax"
+    rbx = "%rbx"
+    rcx = "%rcx"
+    rdx = "%rdx"
     rbp = "%rbp"
     rsp = "%rsp"
-    rdx = "%rdx"
-    rcx = "%rcx"
     rsi = "%rsi"
     rdi = "%rdi"
     r8 = "%r8"
     r9 = "%r9"
+    r10 = "%r10"
+    r11 = "%r11"
+    r12 = "%r12"
+    r13 = "%r13"
+    r14 = "%r14"
+    r15 = "%r15"
+
+    # 4 byte
+    eax = "%eax"
+    ebx = "%ebx"
+    ecx = "%ecx"
     edx = "%edx"
+    ebp = "%ebp"
+    esp = "%esp"
+    esi = "%esi"
+    edi = "%edi"
+    r8d = "%r8d"
+    r9d = "%r9d"
+    r10d = "%r10d"
+    r11d = "%r11d"
+    r12d = "%r12d"
+    r13d = "%r13d"
+    r14d = "%r14d"
+    r15d = "%r15d"
+
+    # 2 byte
+    ax = "%ax"
+    bx = "%bx"
+    cx = "%cx"
+    dx = "%dx"
+    bp = "%bp"
+    sp = "%sp"
+    si = "%si"
+    di = "%di"
+    r8w = "%r8w"
+    r9w = "%r9w"
+    r10w = "%r10w"
+    r11w = "%r11w"
+    r12w = "%r12w"
+    r13w = "%r13w"
+    r14w = "%r14w"
+    r15w = "%r15w"
+
+    # 1 byte
+    al = "%al"
+    bl = "%bl"
+    cl = "%cl"
+    dl = "%dl"
+    ah = "%ah"
+    bh = "%bh"
+    ch = "%ch"
+    dh = "%dh"
+    bpl = "%bpl"
+    spl = "%spl"
+    sil = "%sil"
+    dil = "%dil"
+    r8b = "%r8b"
+    r9b = "%r9b"
+    r10b = "%r10b"
+    r11b = "%r11b"
+    r12b = "%r12b"
+    r13b = "%r13b"
+    r14b = "%r14b"
+    r15b = "%r15b"
 
     def size(self):
-        # e.g. rax, rdx
-        if self.name[0] == "r":
-            return Size.quad_word
-        # e.g. eax, edx
-        if self.name[0] == "e":
-            return Size.double_word
-        # e.g. al, ah
-        if self.name[-1] in ("l", "h"):
-            return Size.byte
-        # e.g. ax
-        return Size.word
+        return RegisterFamily.for_register(self).size_of(self)
 
     def with_offset(self, amount):
         return Address(self, amount)
 
+    def with_size(self, size):
+        return RegisterFamily.for_register(self).with_size(size)
+
     def __str__(self):
         return self.value
+
+
+register_families = [
+    RegisterFamily(
+        Register.al, Register.ax, Register.eax, Register.rax, extra=[Register.ah]
+    ),
+    RegisterFamily(
+        Register.bl, Register.bx, Register.ebx, Register.rbx, extra=[Register.bh]
+    ),
+    RegisterFamily(
+        Register.cl, Register.cx, Register.ecx, Register.rcx, extra=[Register.ch]
+    ),
+    RegisterFamily(
+        Register.dl, Register.dx, Register.edx, Register.rdx, extra=[Register.dh]
+    ),
+    RegisterFamily(Register.sil, Register.si, Register.esi, Register.rsi),
+    RegisterFamily(Register.dil, Register.di, Register.edi, Register.rdi),
+    RegisterFamily(Register.spl, Register.sp, Register.esp, Register.rsp),
+    RegisterFamily(Register.bpl, Register.bp, Register.ebp, Register.rbp),
+    RegisterFamily(Register.r8b, Register.r8w, Register.r8d, Register.r8),
+    RegisterFamily(Register.r9b, Register.r9w, Register.r9d, Register.r9),
+    RegisterFamily(Register.r10b, Register.r10w, Register.r10d, Register.r10),
+    RegisterFamily(Register.r11b, Register.r11w, Register.r11d, Register.r11),
+    RegisterFamily(Register.r12b, Register.r12w, Register.r12d, Register.r12),
+    RegisterFamily(Register.r13b, Register.r13w, Register.r13d, Register.r13),
+    RegisterFamily(Register.r14b, Register.r14w, Register.r14d, Register.r14),
+    RegisterFamily(Register.r15b, Register.r15w, Register.r15d, Register.r15),
+]
 
 
 class Instruction:

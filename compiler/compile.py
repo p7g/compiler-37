@@ -87,16 +87,34 @@ class Compile:
             need_end_label = True
             return f"{decl.name}.end"
 
+        def compile_subexpr(expr):
+            if isinstance(expr, IntExpr):
+                return s.Immediate(expr.value), None
+            if isinstance(expr, IdentExpr):
+                loc = locals_[expr.name]
+                return loc.location, loc.type
+            if isinstance(expr, FieldAccessExpr):
+                target, target_type = compile_subexpr(expr.obj)
+                return (
+                    target.with_offset(target_type.field_offset(expr.field_name)),
+                    target_type.field_type(expr.field_name),
+                )
+            raise NotImplementedError(type(expr))
+
         def compile_expr(expr, type_):
+            value, value_type = compile_subexpr(expr)
             if isinstance(expr, IntExpr):
                 if not isinstance(type_, Integer):
                     raise TypeError(f"{expr.value} is not assignable to {type_}")
-                return s.Immediate(expr.value)
+                return value
             if isinstance(expr, IdentExpr):
-                loc = locals_[expr.name]
-                if type_ != loc.type:
-                    raise TypeError(f"{loc.type} is not assignable to {type_}")
-                return loc.location
+                if type_ != value_type:
+                    raise TypeError(f"{value_type} is not assignable to {type_}")
+                return value
+            if isinstance(expr, FieldAccessExpr):
+                if value_type != type_:
+                    raise TypeError(f"{value_type} is not assignable to {type_}")
+                return value
             raise NotImplementedError()
 
         for i, stmt in enumerate(decl.body):
@@ -109,7 +127,11 @@ class Compile:
                 )
                 if stmt.init is not None:
                     instructions.append(
-                        s.Mov(compile_expr(stmt.init, type_), loc.location)
+                        s.Mov(
+                            compile_expr(stmt.init, type_),
+                            loc.location,
+                            size=s.Size.from_byte_size(type_.size()),
+                        )
                     )
             elif isinstance(stmt, AssignStmt):
                 if isinstance(stmt.target, IdentExpr):
@@ -135,11 +157,25 @@ class Compile:
                 if stmt.value:
                     type_ = self.get_type(decl.return_type)
                     src = compile_expr(stmt.value, type_=type_)
-                    instructions.append(s.Mov(src, s.Register.rax))
-                    if type_.size() > 8:
-                        instructions.append(s.Mov(src.with_offset(8), s.Register.rdx))
-                    elif type_.size() > 16:
+                    instructions.append(
+                        s.Mov(
+                            src,
+                            s.Register.rax.with_size(
+                                s.Size.from_byte_size(min(type_.size(), 8))
+                            ),
+                        )
+                    )
+                    if type_.size() > 16:
                         raise NotImplementedError("Really big return types")
+                    elif type_.size() > 8:
+                        instructions.append(
+                            s.Mov(
+                                src.with_offset(8),
+                                s.Register.rdx.with_size(
+                                    s.Size.from_byte_size(type_.size() - 8)
+                                ),
+                            )
+                        )
                 if i != len(decl.body) - 1:
                     instructions.append(s.Jmp(end_label()))
 
