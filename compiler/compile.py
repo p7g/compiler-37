@@ -10,7 +10,7 @@ from .ast import (
     StructDecl,
     VarDecl,
 )
-from .types import align, Array, Function, Integer, Struct
+from .types_ import align, Array, Function, Integer, Struct
 from . import asm as s
 
 
