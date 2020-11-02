@@ -128,6 +128,7 @@ class RegisterFamily:
         for fam in register_families:
             if reg in fam:
                 return fam
+        raise KeyError(reg)
 
 
 class Register(Operand, Enum, metaclass=RegisterMeta):

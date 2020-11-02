@@ -153,10 +153,11 @@ class Compile:
                     # a[0].a.b[2].c = 123;
                     assert isinstance(stmt.target.obj, IdentExpr)
                     loc = locals_[stmt.target.obj.name]
-                    assert isinstance(loc.type, Struct)
-                    field_offset = loc.type.field_offset(stmt.target.field_name)
+                    type_ = loc.type
+                    assert isinstance(type_, Struct)
+                    field_offset = type_.field_offset(stmt.target.field_name)
                     dest = loc.location.with_offset(field_offset)
-                    type_ = loc.type.field_type(stmt.target.field_name)
+                    type_ = type_.field_type(stmt.target.field_name)
                 else:
                     raise NotImplementedError()
                 src = compile_expr(stmt.value, type_=type_)
