@@ -82,11 +82,15 @@ class Compile:
             s.Register.r8,
             s.Register.r9,
         ]
-        locals_ = {
-            # FIXME: Arguments are on the stack after the first N
-            name: Binding(location=arg_reg[i], type_=t)
-            for i, (name, t) in enumerate(decl.arguments)
-        }
+        locals_ = {}
+
+        # FIXME: Arguments are on the stack after the first N
+        for i, (name, t) in enumerate(decl.arguments):
+            type_ = self.get_type(t)
+            locals_[name] = Binding(
+                location=arg_reg[i].with_size(s.Size.from_byte_size(type_.size())),
+                type_=type_,
+            )
 
         def end_label():
             nonlocal need_end_label
@@ -189,18 +193,10 @@ class Compile:
         if need_end_label:
             instructions.append(s.Label(end_label()))
         instructions.extend(
-            [
-                s.Leave(),
-                s.Ret(),
-            ]
+            [s.Leave(), s.Ret(),]
         )
 
-        self.blocks.append(
-            s.Block(
-                label=decl.name,
-                instructions=instructions,
-            )
-        )
+        self.blocks.append(s.Block(label=decl.name, instructions=instructions,))
 
     def finish(self):
         return s.Program(self.exports, self.blocks)

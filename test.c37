@@ -13,3 +13,17 @@ function test(): BigStruct {
     a.eight_two = 82;
     return a;
 }
+
+function test2(a: int32): int32 {
+    var b: int32;
+    var c: int32;
+
+    a = 1;
+    b = 2;
+    c = 3;
+    a = c;
+    b = a;
+    c = b;
+
+    return a;
+}
