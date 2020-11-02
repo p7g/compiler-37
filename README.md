@@ -6,8 +6,7 @@ These are the makings of a compiler written in Python that compiles a to-be-
 defined language to x86_64 assembly (in GAS syntax for the moment).
 
 
-As of this writing, it can take an AST representing this (there is no parser
-yet):
+As of this writing, it can take a program like this:
 
 ```
 struct BigStruct {
@@ -37,13 +36,14 @@ And print out this:
 test:
 	pushq %rbp
 	movq %rsp, %rbp
+	subq $16, %rsp
 	movl $32, -16(%rbp)
 	movb $8, -12(%rbp)
 	movw $16, -10(%rbp)
 	movb $82, -8(%rbp)
 	movq -16(%rbp), %rax
-	movq -8(%rbp), %rdx
-	popq %rbp
+	movl -8(%rbp), %edx
+	leave
 	ret
 ```
 
@@ -86,16 +86,17 @@ int main(void) {
 To compile it, run this (on Linux):
 
 ```console
-$ python -c 'import compiler' | as -o from_python.o
+$ python . test.c37 | as -o from_python.o
 $ cc -o try-it from_python.o the_c_file.c
 $ ./try-it
 thirty_two=32; eight=8; sixteen=16; eight_two=82
 ```
 
 
-So far, this has been done without any dependencies beyond the Python standard
-library. This isn't by choice this time; I couldn't find a library to make
-generating assembly any easier.
+Parsing is taken care of using ANTLR4. The reasoning for using a parser
+generator rather than writing a recursive descent one by hand is to try to have
+some semblance of a language definition. That, and also I really don't feel
+like writing a parser.
 
 
 ## Resources

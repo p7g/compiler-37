@@ -1,30 +1,28 @@
-from compiler.asm import *
+import argparse
 from compiler.compile import Compile
 from compiler.parser import parse
-from compiler.types_ import *
-from compiler import ast
 
-
-program = parse(
-    """
-    struct BigStruct {
-        thirty_two: int32,
-        eight: int8,
-        sixteen: int16,
-        eight_two: int8,
-    }
-
-    function test(): BigStruct {
-        var a: BigStruct;
-        a.thirty_two = 32;
-        a.eight = 8;
-        a.sixteen = 16;
-        a.eight_two = 82;
-        return a;
-    }
-    """
+argparser = argparse.ArgumentParser(description="Compiler 37")
+argparser.add_argument("files", metavar="FILE", type=str, nargs="+", help="Input files")
+argparser.add_argument(
+    "-o",
+    "--output",
+    dest="out",
+    type=str,
+    default="-",
+    help="Output assembly to a file",
 )
+args = argparser.parse_args()
 
 c = Compile()
-c.add_file(program)
-print(str(c.finish()))
+
+for file in args.files:
+    with open(file, "r") as f:
+        c.add_file(parse(f.read()))
+
+asm = str(c.finish())
+if args.out == "-":
+    print(asm)
+else:
+    with open(args.out, "w") as f:
+        f.write(asm)
