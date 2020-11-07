@@ -38,7 +38,7 @@ expr : ID | integer | '(' expr ')' ;
 
 assign : assignmentTarget '=' expr ';' ;
 
-assignmentTarget : ID | expr '.' ID ;
+assignmentTarget : ID | assignmentTarget '.' ID ;
 
 return_ : 'return' expr? ';' ;
 

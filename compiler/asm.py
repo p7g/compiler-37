@@ -255,6 +255,10 @@ class Instruction:
 
 class SizedBinaryInstruction(Instruction):
     def __init__(self, src, dest, size=None):
+        if isinstance(src, Address) and isinstance(dest, Address):
+            raise TypeError(
+                f"Invalid arguments for {self.__class__.__name__}: {src}, {dest}"
+            )
         self.src = src
         self.dest = dest
         self.size = size or Operand.unify_size(src, dest)

@@ -14,7 +14,29 @@ function test(): BigStruct {
     return a;
 }
 
-function test2(a: int32): int32 {
+struct C {
+    c: int8,
+}
+
+struct B {
+    b: int8,
+    c: C,
+}
+
+struct A {
+    a: int8,
+    b: B,
+}
+
+function test3(a: A): A {
+    a.b.c.c = 3;
+    a.b.b = 2;
+    a.a = 1;
+
+    return a;
+}
+
+function _test2(a: int32): int32 {
     var b: int32;
     var c: int32;
 

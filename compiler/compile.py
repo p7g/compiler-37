@@ -20,6 +20,42 @@ class Binding:
         self.type = type_
 
 
+class OutOfRegisters(Exception):
+    pass
+
+
+class Registers:
+    def __init__(self):
+        self.pos = 0
+        self.available_registers = [
+            s.Register.rax,
+            s.Register.rdi,
+            s.Register.rsi,
+            s.Register.rdx,
+            s.Register.rcx,
+            s.Register.r8,
+            s.Register.r9,
+            s.Register.r10,
+            s.Register.r11,
+        ]
+
+    def reserve(self):
+        if self.pos >= len(self.available_registers):
+            raise OutOfRegisters()
+        reg = self.available_registers[self.pos]
+        self.pos += 1
+        this = self
+
+        class RegisterManager:
+            def __enter__(self):
+                return reg
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                this.pos -= 1
+
+        return RegisterManager()
+
+
 class Compile:
     def __init__(self):
         self.exports = []
@@ -60,10 +96,14 @@ class Compile:
         if decl.export:
             self.exports.append(decl.name)
 
+        # FIXME: Probably don't need to align all the variables to 8 no matter
+        # what.
         stack_usage = 0
         for stmt in decl.body:
             if isinstance(stmt, VarDecl):
                 stack_usage += align(self.get_type(stmt.type).size(), 8)
+        for arg in decl.arguments:
+            stack_usage += align(self.get_type(arg.type).size(), 8)
 
         # Prologue
         instructions = [
@@ -72,6 +112,7 @@ class Compile:
             s.Sub(s.Immediate(stack_usage), s.Register.rsp),
         ]
 
+        registers = Registers()
         stack_offset = 0
         need_end_label = False
         arg_reg = [
@@ -84,13 +125,15 @@ class Compile:
         ]
         locals_ = {}
 
-        # FIXME: Arguments are on the stack after the first N
+        # FIXME: Arguments are on the stack after the first 6
         for i, (name, t) in enumerate(decl.arguments):
             type_ = self.get_type(t)
-            locals_[name] = Binding(
-                location=arg_reg[i].with_size(s.Size.from_byte_size(type_.size())),
-                type_=type_,
+            stack_offset -= align(type_.size(), 8)
+            dest = s.Address(s.Register.rbp, stack_offset)
+            instructions.append(
+                s.Mov(arg_reg[i].with_size(s.Size.from_byte_size(type_.size())), dest),
             )
+            locals_[name] = Binding(location=dest, type_=type_)
 
         def end_label():
             nonlocal need_end_label
@@ -111,21 +154,17 @@ class Compile:
                 )
             raise NotImplementedError(type(expr))
 
-        def compile_expr(expr, type_):
-            value, value_type = compile_subexpr(expr)
+        def compile_expr(expr, expected_type):
+            value, actual_type = compile_subexpr(expr)
             if isinstance(expr, IntExpr):
-                if not isinstance(type_, Integer):
-                    raise TypeError(f"{expr.value} is not assignable to {type_}")
+                if not isinstance(expected_type, Integer):
+                    raise TypeError(
+                        f"{expr.value} is not assignable to {expected_type}"
+                    )
                 return value
-            if isinstance(expr, IdentExpr):
-                if type_ != value_type:
-                    raise TypeError(f"{value_type} is not assignable to {type_}")
-                return value
-            if isinstance(expr, FieldAccessExpr):
-                if value_type != type_:
-                    raise TypeError(f"{value_type} is not assignable to {type_}")
-                return value
-            raise NotImplementedError()
+            if expected_type != actual_type:
+                raise TypeError(f"{actual_type} is not assignable to {expected_type}")
+            return value
 
         for i, stmt in enumerate(decl.body):
             if isinstance(stmt, VarDecl):
@@ -136,38 +175,35 @@ class Compile:
                     s.Address(s.Register.rbp, stack_offset), type_
                 )
                 if stmt.init is not None:
-                    instructions.append(
-                        s.Mov(
-                            compile_expr(stmt.init, type_),
-                            loc.location,
-                            size=s.Size.from_byte_size(type_.size()),
-                        )
-                    )
+                    expr = compile_expr(stmt.init, type_)
+                    size = s.Size.from_byte_size(type_.size())
+                    if isinstance(expr, s.Address):
+                        with registers.reserve() as reg:
+                            reg = reg.with_size(size)
+                            instructions.append(s.Mov(expr, reg, size=size))
+                            expr = reg
+                    instructions.append(s.Mov(expr, loc.location, size=size,))
             elif isinstance(stmt, AssignStmt):
                 if isinstance(stmt.target, IdentExpr):
                     loc = locals_[stmt.target.name]
                     dest = loc.location
                     type_ = loc.type
                 elif isinstance(stmt.target, FieldAccessExpr):
-                    # FIXME: need to loop to handle cases like:
-                    # a[0].a.b[2].c = 123;
-                    assert isinstance(stmt.target.obj, IdentExpr)
-                    loc = locals_[stmt.target.obj.name]
-                    type_ = loc.type
-                    assert isinstance(type_, Struct)
-                    field_offset = type_.field_offset(stmt.target.field_name)
-                    dest = loc.location.with_offset(field_offset)
-                    type_ = type_.field_type(stmt.target.field_name)
+                    dest, type_ = compile_subexpr(stmt.target)
                 else:
                     raise NotImplementedError()
-                src = compile_expr(stmt.value, type_=type_)
-                instructions.append(
-                    s.Mov(src, dest, size=s.Size.from_byte_size(type_.size()))
-                )
+                size = s.Size.from_byte_size(type_.size())
+                src = compile_expr(stmt.value, expected_type=type_)
+                if isinstance(src, s.Address):
+                    with registers.reserve() as reg:
+                        reg = reg.with_size(size)
+                        instructions.append(s.Mov(src, reg, size=size))
+                        src = reg
+                instructions.append(s.Mov(src, dest, size=size))
             elif isinstance(stmt, ReturnStmt):
                 if stmt.value:
                     type_ = self.get_type(decl.return_type)
-                    src = compile_expr(stmt.value, type_=type_)
+                    src = compile_expr(stmt.value, expected_type=type_)
                     instructions.append(
                         s.Mov(
                             src,
@@ -193,11 +229,9 @@ class Compile:
         # Epilogue
         if need_end_label:
             instructions.append(s.Label(end_label()))
-        instructions.extend(
-            [s.Leave(), s.Ret(),]
-        )
+        instructions.extend([s.Leave(), s.Ret()])
 
-        self.blocks.append(s.Block(label=decl.name, instructions=instructions,))
+        self.blocks.append(s.Block(label=decl.name, instructions=instructions))
 
     def finish(self):
         return s.Program(self.exports, self.blocks)

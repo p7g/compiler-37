@@ -25,6 +25,7 @@ class ConvertAST(Compiler37Visitor):
             ctx.args.accept(self) if ctx.args else [],
             ctx.return_type.accept(self),
             [s.accept(self) for s in ctx.body or []],
+            export=True,
         )
 
     def visitArg(self, ctx):
@@ -69,9 +70,9 @@ class ConvertAST(Compiler37Visitor):
         )
 
     def visitAssignmentTarget(self, ctx):
-        expr = ctx.expr()
-        if expr:
-            return ast.FieldAccessExpr(expr.accept(self), str(ctx.ID()))
+        target = ctx.assignmentTarget()
+        if target:
+            return ast.FieldAccessExpr(target.accept(self), str(ctx.ID()))
         return ast.IdentExpr(str(ctx.ID()))
 
     def visitReturn_(self, ctx):
