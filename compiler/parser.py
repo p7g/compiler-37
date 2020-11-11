@@ -1,5 +1,8 @@
+import io
 import sys
 from antlr4 import CommonTokenStream, InputStream
+from antlr4.error.ErrorListener import ConsoleErrorListener
+from contextlib import redirect_stderr
 
 from . import ast
 
@@ -10,6 +13,18 @@ try:
 except ImportError:
     print("Missing _parser module, run `make parser`", file=sys.stderr)
     raise
+
+
+class ParseError(Exception):
+    pass
+
+
+class RaiseOnSyntaxError(ConsoleErrorListener):
+    def syntaxError(self, *args, **kwargs):
+        captured = io.StringIO()
+        with redirect_stderr(captured):
+            super().syntaxError(*args, **kwargs)
+        raise ParseError(captured.getvalue())
 
 
 class ConvertAST(Compiler37Visitor):
@@ -84,4 +99,6 @@ def parse(input):
     lexer = Compiler37Lexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = Compiler37Parser(stream)
+    parser.removeErrorListener(ConsoleErrorListener.INSTANCE)
+    parser.addErrorListener(RaiseOnSyntaxError())
     return parser.program().accept(ConvertAST())
