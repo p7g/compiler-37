@@ -1,0 +1,70 @@
+- [ ] Expressions
+  - [ ] Literals
+    - [x] Integer
+    - [ ] Floating-point
+    - [ ] String
+    - [ ] Character
+  - [x] Identifier
+  - [ ] Call
+  - [ ] Math
+  - [ ] Bitwise math
+  - [ ] Boolean math
+  - [ ] `sizeof` operator
+  - [ ] Array/pointer access
+  - [x] Struct field access
+  - [ ] Enumeration short-hand
+  - [ ] Assignment (also compound)
+  - [ ] Address-of
+  - [ ] Comparison
+- [ ] Recursive function calls
+- [ ] Expression statement
+- [ ] Flow control
+  - [ ] While loop
+  - [ ] For loop
+  - [ ] Switch statement
+  - [ ] Break/continue
+  - [ ] Labels
+  - [ ] Goto
+  - [ ] If statement
+- [ ] Unsigned integers
+- [ ] Implicit integer conversions (when safe)
+- [ ] Compound assignment
+- [ ] Pointers
+  - [ ] Type expression syntax
+  - [ ] Dereferencing as expression
+  - [ ] Dereference-assign
+  - [ ] Dot-access for pointer-to-struct
+- [ ] Void functions (no return type annotation)
+- [ ] Enums
+  - [ ] Short-hand for when type is known
+  - [ ] Number values
+- [ ] Type aliases
+- [ ] Opaque types
+- [ ] "Any" pointers
+- [ ] Type casting
+- [ ] Basic function-local type inference
+- [ ] Data segment for constants
+- [ ] Modules
+  - [ ] Public types
+  - [ ] Private functions
+- [ ] Forward declarations or insignificant declaration order
+- [ ] Extern declarations
+  - [ ] Functions (no parameter names, no body)
+  - [ ] Types (opaque or full struct/enum/union declarations)
+  - [ ] Standard input, output, and error
+- [ ] Portability
+  - [ ] Global symbol conventions
+  - [ ] Compile-time processing (cpp?)
+- [ ] Nitty gritty stuff
+  - [ ] Moving large (bigger than a pointer) values around
+  - [ ] Returning values larger than 128 bits
+  - [ ] Large numbers of arguments (passed on stack)
+  - [ ] Converting between number types
+- [ ] Optimizations
+  - [ ] Build SSA
+  - [ ] Dead code elimination
+  - [ ] mem2reg
+  - [ ] Function inlining
+  - [ ] Constant propagation
+  - [ ] Constant folding
+  - [ ] Loop unrolling
